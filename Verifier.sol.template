@@ -1,0 +1,85 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.9;
+
+contract PairingTest {
+
+    // -A
+    uint256 constant aG1_x =
+        $aG1_x;
+    uint256 constant aG1_y =
+        $aG1_y;
+
+    // B
+    uint256 constant bG2_x1 =
+        $bG2_x1;
+    uint256 constant bG2_x2 =
+        $bG2_x2;
+    uint256 constant bG2_y1 =
+        $bG2_y1;
+    uint256 constant bG2_y2 =
+        $bG2_y2;
+
+    // alpha
+    uint256 constant alphaG1_x =
+        $alphaG1_x;
+    uint256 constant alphaG1_y =
+        $alphaG1_y;
+
+    // beta
+    uint256 constant betaG2_x1 =
+        $betaG2_x1;
+    uint256 constant betaG2_x2 =
+        $betaG2_x2;
+    uint256 constant betaG2_y1 =
+        $betaG2_y1;
+    uint256 constant betaG2_y2 =
+        $betaG2_y2;
+
+    uint256 constant cG1_x =
+        $cG1_x;
+    uint256 constant cG1_y =
+        $cG1_y;
+
+    uint256 constant Q =
+        21888242871839275222246405745257275088696311157297823662689037894645226208583;
+
+    function run(bytes memory input) public view returns (bool) {
+        // optional, the precompile checks this too and reverts (with no error) if false, this helps narrow down possible errors
+        if (input.length % 192 != 0) revert("Points must be a multiple of 6");
+        (bool success, bytes memory data) = address(0x08).staticcall(input);
+        if (success) return abi.decode(data, (bool));
+        revert("Wrong pairing");
+    }
+
+    function verify() public view returns (bool) {
+        // -A * B + alpha * betta + C = 0
+        bytes memory points1 = abi.encode(
+            aG1_x,
+            aG1_y,
+            bG2_x2,
+            bG2_x1,
+            bG2_y2,
+            bG2_y1,
+            alphaG1_x,
+            alphaG1_y,
+            betaG2_x2,
+            betaG2_x1,
+            betaG2_y2,
+            betaG2_y1
+        );
+
+        bytes memory points2 = abi.encode(
+            cG1_x,
+            cG1_y,
+            11559732032986387107991004021392285783925812861821192530917403151452391805634,
+            10857046999023057135944570762232829481370756359578518086990519993285655852781,
+            4082367875863433681332203403145435568316851327593401208105741076214120093531,
+            8495653923123431417604973247489272438418190587263600148770280649306958101930
+        );
+
+        bytes memory points = abi.encodePacked(points1, points2);
+
+        bool x = run(points);
+        return x;
+    }
+}
