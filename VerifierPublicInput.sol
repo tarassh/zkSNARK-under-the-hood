@@ -2,11 +2,12 @@
 pragma solidity ^0.8.9;
 
 contract PairingTest {
-    // -A
+
+    // A
     uint256 constant aG1_x =
         1386024683863798223806715768494499062004541323940181712423964207525793364711;
     uint256 constant aG1_y =
-        21888102028181201026520927748650667146060315771644791066010745818423154284449;
+        140843658074195725477996606607942635995385653032596678292076222071924134;
 
     // B
     uint256 constant bG2_x1 =
@@ -40,7 +41,7 @@ contract PairingTest {
     uint256 constant cG1_y =
         21613286137401577200129067304160980059729655631955179340440670659782625352184;
 
-    // K
+    // K 
     uint256 constant kG1_x =
         2285801182806610770657419494535950855770340693072843615122889807967969315919;
     uint256 constant kG1_y =
@@ -58,6 +59,17 @@ contract PairingTest {
     uint256 constant Q =
         21888242871839275222246405745257275088696311157297823662689037894645226208583;
 
+    struct G1Point {
+        uint256 x;
+        uint256 y;
+    }
+
+    function negate(G1Point memory p) internal pure returns (G1Point memory) {
+        // The prime q in the base field F_q for G1
+        if (p.x == 0 && p.y == 0) return G1Point(0, 0);
+        return G1Point(p.x, Q - (p.y % Q));
+    }
+
     function run(bytes memory input) public view returns (bool) {
         // optional, the precompile checks this too and reverts (with no error) if false, this helps narrow down possible errors
         if (input.length % 192 != 0) revert("Points must be a multiple of 6");
@@ -70,7 +82,7 @@ contract PairingTest {
         // -A * B + alpha * betta + C = 0
         bytes memory points1 = abi.encode(
             aG1_x,
-            aG1_y,
+            negate(G1Point(aG1_x, aG1_y)).y,
             bG2_x2,
             bG2_x1,
             bG2_y2,
