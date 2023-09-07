@@ -79,7 +79,7 @@ contract PairingTest {
     }
 
     function verify() public view returns (bool) {
-        // -A * B + alpha * beta + C = 0
+        // -A * B + alpha * beta + C * 1(G2) + K * 1(G2) = 0
         bytes memory points1 = abi.encode(
             aG1_x,
             negate(G1Point(aG1_x, aG1_y)).y,
@@ -111,8 +111,6 @@ contract PairingTest {
         );
 
         bytes memory points = abi.encodePacked(points1, points2);
-
-        bool x = run(points);
-        return x;
+        return run(points);
     }
 }
