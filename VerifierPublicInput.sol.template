@@ -41,11 +41,11 @@ contract PairingTest {
     uint256 constant cG1_y =
         $cG1_y;
 
-    // Verifier C 
-    uint256 constant cG1_verifier_x =
-        $cG1_verifier_x;
-    uint256 constant cG1_verifier_y =
-        $cG1_verifier_y;
+    // K 
+    uint256 constant kG1_x =
+        $kG1_x;
+    uint256 constant kG1_y =
+        $kG1_y;
 
     uint256 constant G2_x1 =
         10857046999023057135944570762232829481370756359578518086990519993285655852781;
@@ -91,8 +91,8 @@ contract PairingTest {
             G2_x1,
             G2_y2,
             G2_y1,
-            cG1_verifier_x,
-            cG1_verifier_y,
+            kG1_x,
+            kG1_y,
             G2_x2,
             G2_x1,
             G2_y2,
