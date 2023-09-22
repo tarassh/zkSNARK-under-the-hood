@@ -128,7 +128,7 @@ contract PairingTest {
             betaG2_x2,
             betaG2_x1,
             betaG2_y2,
-            betaG2_y1,
+            betaG2_y1
         );
 
         bytes memory points3 = abi.encode(
