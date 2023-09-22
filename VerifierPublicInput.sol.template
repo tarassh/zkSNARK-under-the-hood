@@ -41,11 +41,21 @@ contract PairingTest {
     uint256 constant cG1_y =
         $cG1_y;
 
-    // K 
-    uint256 constant kG1_x =
-        $kG1_x;
-    uint256 constant kG1_y =
-        $kG1_y;
+    // K1 
+    uint256 constant k1G1_x =
+        $k1G1_x;
+    uint256 constant k1G1_y =
+        $k1G1_y;
+
+    // K2
+    uint256 constant k2G1_x =
+        $k2G1_x;
+    uint256 constant k2G1_y =
+        $k2G1_y;
+
+    // public input
+    uint256 one = $one;
+    uint256 out = $out;
 
     uint256 constant G2_x1 =
         10857046999023057135944570762232829481370756359578518086990519993285655852781;
@@ -64,6 +74,30 @@ contract PairingTest {
         uint256 y;
     }
 
+    function add(
+        G1Point memory p1,
+        G1Point memory p2
+    ) public view returns (G1Point memory r) {
+        (bool ok, bytes memory result) = address(6).staticcall(
+            abi.encode(p1.x, p1.y, p2.x, p2.y)
+        );
+        require(ok, "g1add failed");
+        (uint256 x, uint256 y) = abi.decode(result, (uint256, uint256));
+        r = G1Point(x, y);
+    }
+
+    function mul(
+        G1Point memory p,
+        uint256 scalar
+    ) public view returns (G1Point memory r) {
+        (bool ok, bytes memory result) = address(7).staticcall(
+            abi.encode(p.x, p.y, scalar)
+        );
+        require(ok, "g1mul failed");
+        (uint256 x, uint256 y) = abi.decode(result, (uint256, uint256));
+        r = G1Point(x, y);
+    }
+
     function negate(G1Point memory p) internal pure returns (G1Point memory) {
         // The prime q in the base field F_q for G1
         if (p.x == 0 && p.y == 0) return G1Point(0, 0);
@@ -79,6 +113,10 @@ contract PairingTest {
     }
 
     function verify() public view returns (bool) {
+        G1Point memory k1 = mul(G1Point(k1G1_x, k1G1_y), one);
+        G1Point memory k2 = mul(G1Point(k2G1_x, k2G1_y), out);
+        G1Point memory K = add(k1, k2);
+
         // -A * B + alpha * beta + C * 1(G2) + K * 1(G2) = 0
         bytes memory points1 = abi.encode(
             aG1_x,
@@ -102,8 +140,8 @@ contract PairingTest {
             G2_x1,
             G2_y2,
             G2_y1,
-            kG1_x,
-            kG1_y,
+            K.x,
+            K.y,
             G2_x2,
             G2_x1,
             G2_y2,
