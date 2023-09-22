@@ -74,6 +74,13 @@ contract PairingTest {
         uint256 y;
     }
 
+    struct G2Point {
+        uint256 x1;
+        uint256 x2;
+        uint256 y1;
+        uint256 y2;
+    }
+
     function add(
         G1Point memory p1,
         G1Point memory p2
@@ -112,19 +119,28 @@ contract PairingTest {
         revert("Wrong pairing");
     }
 
-    function verify() public view returns (bool) {
-        G1Point memory k1 = mul(G1Point(k1G1_x, k1G1_y), one);
-        G1Point memory k2 = mul(G1Point(k2G1_x, k2G1_y), out);
+    function emulate() public view returns(bool) {
+        G1Point memory A = G1Point(aG1_x, aG1_y);
+        G2Point memory B = G2Point(bG2_x1, bG2_x2, bG2_y1, bG2_y2);
+        G1Point memory C = G1Point(cG1_x, cG1_y);
+
+        uint256[2] memory input = [one, out];
+        return verify(A, B, C, input);
+    }
+
+    function verify(G1Point memory A, G2Point memory B, G1Point memory C, uint256[2] memory input) public view returns (bool) {
+        G1Point memory k1 = mul(G1Point(k1G1_x, k1G1_y), input[0]);
+        G1Point memory k2 = mul(G1Point(k2G1_x, k2G1_y), input[1]);
         G1Point memory K = add(k1, k2);
 
         // -A * B + alpha * beta + C * 1(G2) + K * 1(G2) = 0
         bytes memory points1 = abi.encode(
-            aG1_x,
-            negate(G1Point(aG1_x, aG1_y)).y,
-            bG2_x2,
-            bG2_x1,
-            bG2_y2,
-            bG2_y1,
+            A.x,
+            negate(A).y,
+            B.x2,
+            B.x1,
+            B.y2,
+            B.y1,
             alphaG1_x,
             alphaG1_y,
             betaG2_x2,
@@ -134,8 +150,8 @@ contract PairingTest {
         );
 
         bytes memory points2 = abi.encode(
-            cG1_x,
-            cG1_y,
+            C.x,
+            C.y,
             G2_x2,
             G2_x1,
             G2_y2,
