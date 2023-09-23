@@ -3,32 +3,6 @@ pragma solidity ^0.8.9;
 
 contract PairingTest {
 
-    // A
-    uint256 constant aG1_x =
-        1386024683863798223806715768494499062004541323940181712423964207525793364711;
-    uint256 constant aG1_y =
-        140843658074195725477996606607942635995385653032596678292076222071924134;
-
-    // B
-    uint256 constant bG2_x1 =
-        2268131489099612700799057509317325492629365410973939712610009952960246451283;
-    uint256 constant bG2_x2 =
-        5460202898618824449851004635208915161845252587893842541197344609059159079041;
-    uint256 constant bG2_y1 =
-        21214978237453897862935673366579439999311734514850735211426933843714547507738;
-    uint256 constant bG2_y2 =
-        20956792494964230503385709419527449681227575755609196682056154158621712303733;
-
-    // C
-    uint256 constant cG1_x =
-        10674265309145386867701579340117613139347005293915767777967744929866231555068;
-    uint256 constant cG1_y =
-        21807034771985430326722648124698245516016073701212659375346472376435314627002;
-
-    // public input
-    uint256 one = 1;
-    uint256 out = 104;
-
     uint256 constant Q =
         21888242871839275222246405745257275088696311157297823662689037894645226208583;
 
@@ -44,6 +18,12 @@ contract PairingTest {
         uint256 y2;
     }
 
+    struct Proof {
+        G1Point A;
+        G2Point B;
+        G1Point C;
+    }
+
     struct VerifierKey {
         G1Point alpha;
         G2Point beta;
@@ -51,6 +31,20 @@ contract PairingTest {
         G2Point delta;
         G1Point IC0;
         G1Point IC1;
+    }
+
+    // proof has to be supplied by the user, but for demo purposes we just hardcode it
+    function proof() public pure returns (Proof memory p) {
+        p = Proof(
+            G1Point(1386024683863798223806715768494499062004541323940181712423964207525793364711, 140843658074195725477996606607942635995385653032596678292076222071924134),
+            G2Point(2268131489099612700799057509317325492629365410973939712610009952960246451283, 5460202898618824449851004635208915161845252587893842541197344609059159079041, 21214978237453897862935673366579439999311734514850735211426933843714547507738, 20956792494964230503385709419527449681227575755609196682056154158621712303733),
+            G1Point(10674265309145386867701579340117613139347005293915767777967744929866231555068, 21807034771985430326722648124698245516016073701212659375346472376435314627002)
+        );
+    }
+
+    function input() public pure returns (uint256[2] memory _input) {
+        _input[0] = 1;
+        _input[1] = 104;
     }
 
     function verifierKey() public pure returns (VerifierKey memory vk) {
@@ -94,26 +88,21 @@ contract PairingTest {
         return G1Point(p.x, Q - (p.y % Q));
     }
 
-    function run(bytes memory input) public view returns (bool) {
+    function run(bytes memory _input) public view returns (bool) {
         // optional, the precompile checks this too and reverts (with no error) if false, this helps narrow down possible errors
-        if (input.length % 192 != 0) revert("Points must be a multiple of 6");
-        (bool success, bytes memory data) = address(0x08).staticcall(input);
+        if (_input.length % 192 != 0) revert("Points must be a multiple of 6");
+        (bool success, bytes memory data) = address(0x08).staticcall(_input);
         if (success) return abi.decode(data, (bool));
         revert("Wrong pairing");
     }
 
     function emulate() public view returns(bool) {
-        G1Point memory A = G1Point(aG1_x, aG1_y);
-        G2Point memory B = G2Point(bG2_x1, bG2_x2, bG2_y1, bG2_y2);
-        G1Point memory C = G1Point(cG1_x, cG1_y);
-
-        uint256[2] memory input = [one, out];
-        return verify(A, B, C, input);
+        return verify(proof().A, proof().B, proof().C, input());
     }
 
-    function verify(G1Point memory A, G2Point memory B, G1Point memory C, uint256[2] memory input) public view returns (bool) {
-        G1Point memory k1 = mul(verifierKey().IC0, input[0]);
-        G1Point memory k2 = mul(verifierKey().IC1, input[1]);
+    function verify(G1Point memory A, G2Point memory B, G1Point memory C, uint256[2] memory _input) public view returns (bool) {
+        G1Point memory k1 = mul(verifierKey().IC0, _input[0]);
+        G1Point memory k2 = mul(verifierKey().IC1, _input[1]);
         G1Point memory K = add(k1, k2);
 
         // -A * B + alpha * beta + C * delta + K * gamma = 0
