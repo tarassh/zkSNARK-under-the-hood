@@ -1,4 +1,4 @@
-from py_ecc.optimized_bn128 import add, multiply, G1, G2, neg, pairing, eq, normalize, FQ, FQ2, curve_order
+from py_ecc.optimized_bn128 import add, multiply, G1, G2, neg, pairing, eq, normalize, FQ, FQ2, curve_order, is_on_curve
 
 
 class GPoint(tuple):
@@ -44,3 +44,11 @@ def generator1():
 
 def generator2():
     return GPoint(*G2)
+
+def validate_point(pt):
+    if isinstance(pt[0], FQ):
+        assert is_on_curve(pt, FQ(3))
+    elif isinstance(pt[0], FQ2):
+        assert is_on_curve(pt, FQ2([3, 0]) / FQ2([9, 1]))
+    else:
+        raise Exception("Invalid point")
