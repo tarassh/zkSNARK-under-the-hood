@@ -1,7 +1,42 @@
-from py_ecc.optimized_bn128 import add, multiply, G1, G2, neg, pairing, eq, normalize, FQ, FQ2, curve_order, is_on_curve
+"""
+This module provides a wrapper for the optimized_bn128 module.
+It also provides a wrapper for the optimized_bn128 module's G1 and G2 points.
+"""
+from py_ecc.optimized_bn128 import (
+    add,
+    multiply,
+    G1,
+    G2,
+    neg,
+    pairing,
+    eq,
+    normalize,
+    FQ,
+    FQ2,
+    curve_order,
+    is_on_curve,
+)
+
+__all__ = [
+    "GPoint",
+    "generator1",
+    "generator2",
+    "validate_point",
+    "normalize",
+    "curve_order",
+]
 
 
 class GPoint(tuple):
+
+    """ 
+    A point on the BN128 curve. 
+    This class is a wrapper G1 and G2 points to provide a more intuitive
+    interface. For example, instead of writing `multiply(G1, 5)` you can
+    write `G1 * 5` or `5 * G1`. Similarly, instead of writing `add(G1, G2)`
+    you can write `G1 + G2`.
+    """
+
     def __new__(cls, x, y, z):
         return tuple.__new__(cls, (x, y, z))
 
@@ -35,17 +70,27 @@ class GPoint(tuple):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def pairing(self, other):
+    def pair(self, other):
+        """ Pairing function. """
+
         return pairing(self, other)
 
 
 def generator1():
+    """ Generator for G1. """
     return GPoint(*G1)
 
+
 def generator2():
+    """ Generator for G2. """
     return GPoint(*G2)
 
+
 def validate_point(pt):
+    """
+    Check if a point is on the curve.
+    Used in Plonk's verifier. Weak curve attack mitigation.
+    """
     if isinstance(pt[0], FQ):
         assert is_on_curve(pt, FQ(3))
     elif isinstance(pt[0], FQ2):
