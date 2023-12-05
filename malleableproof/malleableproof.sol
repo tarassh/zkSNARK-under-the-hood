@@ -43,7 +43,7 @@ contract MalleableProof {
         return [[points[0][0], points[0][1]], [uint256(q - points[1][0] % q), uint256(q - (points[1][1] % q))]];
     }
 
-    function test() public view {
+    function test() public view returns(bool) {
         uint256[2] memory pA_neg = negate(pA);
         uint256[2][2] memory pB_neg = negate(pB);
 
@@ -54,6 +54,8 @@ contract MalleableProof {
 
         require(verifier.verifyProof(pA, pB, pC, pubSignals), "original proof failed");
         require(verifier.verifyProof(pA_neg, pB_neg, pC, pubSignals), "malleable proof failed");
+
+        return true;
     }
 }
 
