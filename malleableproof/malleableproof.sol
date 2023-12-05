@@ -43,18 +43,17 @@ contract MalleableProof {
         return [[points[0][0], points[0][1]], [uint256(q - points[1][0] % q), uint256(q - (points[1][1] % q))]];
     }
 
-    function check_original_proof() public view {
-        require(
-            verifier.verifyProof(pA, pB, pC, pubSignals),
-            "verification failed"
-        );
-    }
+    function test() public view {
+        uint256[2] memory pA_neg = negate(pA);
+        uint256[2][2] memory pB_neg = negate(pB);
 
-    function check_malleable_proof() public view {
-        require(
-            verifier.verifyProof(negate(pA), negate(pB), pC, pubSignals),
-            "verification failed"
-        );
+        bytes32 originalProofHash = keccak256(abi.encodePacked(pA[0], pA[1], pB[0][0], pB[0][1], pB[1][0], pB[1][1], pC[0], pC[1], pubSignals[0]));
+        bytes32 malleableProofHash = keccak256(abi.encodePacked(pA_neg[0], pA_neg[1], pB_neg[0][0], pB_neg[0][1], pB_neg[1][0], pB_neg[1][1], pC[0], pC[1], pubSignals[0]));
+
+        require(originalProofHash != malleableProofHash, "proofs are equal");
+
+        require(verifier.verifyProof(pA, pB, pC, pubSignals), "original proof failed");
+        require(verifier.verifyProof(pA_neg, pB_neg, pC, pubSignals), "malleable proof failed");
     }
 }
 
