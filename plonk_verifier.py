@@ -38,13 +38,13 @@ galois.Poly.original_call = galois.Poly.__call__
 galois.Poly.__call__ = new_call
 
 
-def verify():
-    proof = json.load(open("proof_attack.json", "r"))
+def verify(proof, circuit, weak=False):
+    with open(proof, "r") as f, open(circuit, "r") as g:
+        proof = json.load(f)
+        circuit = json.load(g)
+
     p = proof.pop("Fp")
-
     Fp = galois.GF(p)
-
-    circuit = json.load(open("circuit.json", "r"))
     circuit.pop("Fp")
     for k, v in circuit.items():
         if k in ["tau", "k1", "k2", "Fp", "omega", "n"]:
@@ -144,21 +144,10 @@ def verify():
     alpha = numbers_to_hash(round1 + round2, Fp)
     zeta = numbers_to_hash(round1 + round2 + round3, Fp)
 
-    print(f"round1 = {round1}")
-    print(f"round2 = {round2}")
-    print(f"round3 = {round3}")
-    print(f"round4 = {round4}")
-
     v = numbers_to_hash(round1 + round2 + round3 + round4, Fp)
     u = numbers_to_hash(round1 + round2 + round3 + round4 + round5, Fp)
-    u = Fp(2)
-
-    print(f"beta = {beta}")
-    print(f"gamma = {gamma}")
-    print(f"alpha = {alpha}")
-    print(f"zeta = {zeta}")
-    print(f"v = {v}")
-    print(f"u = {u}")
+    if weak:
+        u = Fp(2)
 
     Zh_z = Zh(zeta)
     L1_z = L1(zeta)
@@ -202,8 +191,6 @@ def verify():
 
     D_exp -= (tl_exp + tm_exp * zeta ** n + th_exp * zeta ** (2 * n)) * Zh_z
 
-    print(f"D_exp = {D_exp}")
-
     F_exp = (
         D_exp
         + a_exp * v
@@ -212,10 +199,6 @@ def verify():
         + s1_exp * v ** 4
         + s2_exp * v ** 5
     )
-
-    print(f"F_exp = {F_exp}")
-    print(f"r0 = {r0}")
-    print(f"v = {v}")
 
     E_exp = (
         -r0
@@ -230,31 +213,19 @@ def verify():
     if encrypted:
         E_exp = G1 * E_exp
 
-    print(f"E_exp = {E_exp}")
-
     e1 = w_zeta_exp + w_omega_zeta_exp * u
-    e2 = (
-        w_zeta_exp * zeta
-        + w_omega_zeta_exp * (u * zeta * omega)
-        + F_exp - E_exp
-    )
-    print(f"e2 = {w_zeta_exp * zeta} + {w_omega_zeta_exp * (u * zeta * omega)} + {F_exp} - {E_exp}")
+    e2 = w_zeta_exp * zeta + w_omega_zeta_exp * (u * zeta * omega) + F_exp - E_exp
 
     if encrypted:
         pairing1 = tau.tau2.pair(e1)
         pairing2 = G2.pair(e2)
 
-        print(f"pairing1 = {pairing1}")
-        print(f"pairing2 = {pairing2}")
-
         assert pairing1 == pairing2, "pairing1 != pairing2"
     else:
-        print("\n\n--- e1, e2 ---")
-        print(f"e1 = {e1 * tau} = {e1} * tau")
-        print(f"e2 = {e2}")
+
         # assert e1 * tau == e2
         return e1 * tau == e2
 
 
 if __name__ == "__main__":
-    verify()
+    print(verify("forged_proof.json", "circuit.json", True))

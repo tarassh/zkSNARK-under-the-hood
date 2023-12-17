@@ -1,6 +1,13 @@
 from galois import Poly, GF
 import numpy as np
-from py_ecc.optimized_bn128 import multiply, G1, G2, add, pairing, neg, normalize, curve_order
+from py_ecc.optimized_bn128 import (
+    multiply,
+    G1,
+    G2,
+    add,
+    normalize,
+    curve_order,
+)
 from string import Template
 
 # p = 21888242871839275222246405745257275088548364400416034343698204186575808495617
@@ -22,13 +29,23 @@ class QAP:
         R = {self.R}
         O = {self.O}
         T = {self.T}
-        H = {self.H}
         """
         return s
 
 
 class ProverKey:
-    def __init__(self, tau_G1, tau_G2, alpha_G1, beta_G1, beta_G2, delta_G1, delta_G2, K_delta_G1, target_G1):
+    def __init__(
+        self,
+        tau_G1,
+        tau_G2,
+        alpha_G1,
+        beta_G1,
+        beta_G2,
+        delta_G1,
+        delta_G2,
+        K_delta_G1,
+        target_G1,
+    ):
         self.tau_G1 = tau_G1
         self.tau_G2 = tau_G2
         self.alpha_G1 = alpha_G1
@@ -76,7 +93,13 @@ class VerifierKey:
         return s
 
     def normalize(self):
-        return VerifierKey(normalize(self.alpha_G1), normalize(self.beta_G2), normalize(self.gamma_G2), normalize(self.delta_G2), [normalize(point) for point in self.K_gamma_G1])
+        return VerifierKey(
+            normalize(self.alpha_G1),
+            normalize(self.beta_G2),
+            normalize(self.gamma_G2),
+            normalize(self.delta_G2),
+            [normalize(point) for point in self.K_gamma_G1],
+        )
 
 
 class Proof:
@@ -116,15 +139,15 @@ def keygen(qap: QAP):  # -> (ProverKey, VerifierKey)
     T_tau = qap.T(tau)
 
     pow_tauTtau_div_delta = [
-        (tau**i * T_tau) / delta for i in range(0, qap.T.degree - 1)]
+        (tau ** i * T_tau) / delta for i in range(0, qap.T.degree - 1)
+    ]
     target_G1 = [multiply(G1, int(pTd)) for pTd in pow_tauTtau_div_delta]
 
-    K_gamma, K_delta = [k/gamma for k in K_eval[:2]
-                        ], [k/delta for k in K_eval[2:]]
+    K_gamma, K_delta = [k / gamma for k in K_eval[:2]], [k / delta for k in K_eval[2:]]
 
     # generating SRS
-    tau_G1 = [multiply(G1, int(tau**i)) for i in range(0, qap.T.degree)]
-    tau_G2 = [multiply(G2, int(tau**i)) for i in range(0, qap.T.degree)]
+    tau_G1 = [multiply(G1, int(tau ** i)) for i in range(0, qap.T.degree)]
+    tau_G2 = [multiply(G2, int(tau ** i)) for i in range(0, qap.T.degree)]
     alpha_G1 = multiply(G1, int(alpha))
     beta_G1 = multiply(G1, int(beta))
     beta_G2 = multiply(G2, int(beta))
@@ -134,8 +157,17 @@ def keygen(qap: QAP):  # -> (ProverKey, VerifierKey)
     K_gamma_G1 = [multiply(G1, int(k)) for k in K_gamma]
     K_delta_G1 = [multiply(G1, int(k)) for k in K_delta]
 
-    pk = ProverKey(tau_G1, tau_G2, alpha_G1, beta_G1, beta_G2, delta_G1,
-                   delta_G2, K_delta_G1, target_G1)
+    pk = ProverKey(
+        tau_G1,
+        tau_G2,
+        alpha_G1,
+        beta_G1,
+        beta_G2,
+        delta_G1,
+        delta_G2,
+        K_delta_G1,
+        target_G1,
+    )
 
     vk = VerifierKey(alpha_G1, beta_G2, gamma_G2, delta_G2, K_gamma_G1)
 
@@ -158,8 +190,9 @@ def prove(pk: ProverKey, w_pub: [], w_priv: [], qap: QAP):
     assert rem == 0
 
     # [K/δ*w]G1
-    Kw_delta_G1_terms = [multiply(point, int(scaler))
-                         for point, scaler in zip(pk.K_delta_G1, w_priv)]
+    Kw_delta_G1_terms = [
+        multiply(point, int(scaler)) for point, scaler in zip(pk.K_delta_G1, w_priv)
+    ]
     Kw_delta_G1 = Kw_delta_G1_terms[0]
     for i in range(1, len(Kw_delta_G1_terms)):
         Kw_delta_G1 = add(Kw_delta_G1, Kw_delta_G1_terms[i])
@@ -182,7 +215,7 @@ def prove(pk: ProverKey, w_pub: [], w_priv: [], qap: QAP):
 
     As_G1 = multiply(A_G1, int(s))
     Br_G1 = multiply(B_G1, int(r))
-    rs_delta_G1 = multiply(pk.delta_G1, int(-r*s))
+    rs_delta_G1 = multiply(pk.delta_G1, int(-r * s))
 
     HT_G1 = evaluate_poly(H, pk.target_G1)
 
@@ -194,7 +227,9 @@ def prove(pk: ProverKey, w_pub: [], w_priv: [], qap: QAP):
     return Proof(A_G1, B_G2, C_G1)
 
 
-def create_verifier(vk: VerifierKey, w_pub: [], proof: Proof, filename="PairingCheck.sol"):
+def create_verifier(
+    vk: VerifierKey, w_pub: [], proof: Proof, filename="PairingCheck.sol"
+):
     proof = proof.normalize()
     vk = vk.normalize()
     with open("VerifierPublicInputGammaDelta.sol.template", "r") as f:
@@ -257,13 +292,12 @@ def evaluate_poly(poly, trusted_points, verbose=False):
     if verbose:
         [print(normalize(point)) for point in trusted_points]
 
-    terms = [multiply(point, int(coeff))
-             for point, coeff in zip(trusted_points, coeff)]
+    terms = [multiply(point, int(coeff)) for point, coeff in zip(trusted_points, coeff)]
     evaluation = terms[0]
     for i in range(1, len(terms)):
         evaluation = add(evaluation, terms[i])
 
     if verbose:
-        print("-"*10)
+        print("-" * 10)
         print(normalize(evaluation))
     return evaluation
