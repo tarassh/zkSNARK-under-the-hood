@@ -1,6 +1,7 @@
 """
 Utilities for the Plonk protocol.
 """
+import json
 import sha3
 from py_ecc.optimized_bn128 import (
     add,
@@ -27,6 +28,8 @@ __all__ = [
     "SRS",
     "numbers_to_hash",
     "patch_galois",
+    "dump_proof",
+    "dump_circuit",
 ]
 
 
@@ -151,3 +154,29 @@ def patch_galois(Poly):
 
     Poly.original_call = Poly.__call__
     Poly.__call__ = new_call
+
+
+def dump_proof(proof, path):
+    """Dump proof to file."""
+    for k, v in proof.items():
+        if isinstance(v, GPoint) or isinstance(v, GPoint):
+            proof[k] = str(v)
+        else:
+            proof[k] = int(v)
+
+    with open(path, "w") as f:
+        json.dump(proof, f, indent=2)
+
+
+def dump_circuit(circuit, path):
+    """Dump circuit to file."""
+    for k, v in circuit.items():
+        if k in ["tau", "k1", "k2", "Fp", "omega", "n"]:
+            circuit[k] = int(v)
+        elif isinstance(v, bool):
+            continue
+        else:
+            circuit[k] = [int(x) for x in v]
+
+    with open(path, "w") as f:
+        json.dump(circuit, f, indent=2)
