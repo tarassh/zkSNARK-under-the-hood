@@ -26,6 +26,7 @@ __all__ = [
     "curve_order",
     "SRS",
     "numbers_to_hash",
+    "patch_galois",
 ]
 
 
@@ -135,3 +136,18 @@ def numbers_to_hash(numbers, field) -> int:
         else:
             engine.update(bytes(hex(int(number)), "utf-8"))
     return field(int(engine.hexdigest(), 16) % field.order)
+
+
+def patch_galois(Poly):
+    def new_call(self, at, **kwargs):
+        if isinstance(at, SRS):
+            coeffs = self.coeffs[::-1]
+            result = at.tau1[0] * coeffs[0]
+            for i in range(1, len(coeffs)):
+                result += at.tau1[i] * coeffs[i]
+            return result
+
+        return Poly.original_call(self, at, **kwargs)
+
+    Poly.original_call = Poly.__call__
+    Poly.__call__ = new_call

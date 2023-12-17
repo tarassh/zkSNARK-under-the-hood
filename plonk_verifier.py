@@ -2,7 +2,7 @@ import json
 import sha3
 import galois
 from py_ecc.optimized_bn128 import FQ
-from utils import GPoint, SRS, G1, G2, generator1, generator2, validate_point
+from utils import GPoint, SRS, generator1, generator2, validate_point, patch_galois
 
 
 def numbers_to_hash(numbers, field) -> int:
@@ -22,20 +22,7 @@ def numbers_to_hash(numbers, field) -> int:
 G1 = generator1()
 G2 = generator2()
 
-
-def new_call(self, at, **kwargs):
-    if isinstance(at, SRS):
-        coeffs = self.coeffs[::-1]
-        result = at.tau1[0] * coeffs[0]
-        for i in range(1, len(coeffs)):
-            result += at.tau1[i] * coeffs[i]
-        return result
-
-    return galois.Poly.original_call(self, at, **kwargs)
-
-
-galois.Poly.original_call = galois.Poly.__call__
-galois.Poly.__call__ = new_call
+patch_galois(galois.Poly)
 
 
 def verify(proof, circuit, weak=False):
@@ -155,7 +142,7 @@ def verify(proof, circuit, weak=False):
 
     r0 = (
         PI_z
-        - L1_z * alpha ** 2
+        - L1_z * alpha**2
         - (a_zeta + beta * s1_zeta + gamma)
         * (b_zeta + beta * s2_zeta + gamma)
         * (c_zeta + gamma)
@@ -176,7 +163,7 @@ def verify(proof, circuit, weak=False):
         * (b_zeta + beta * zeta * k1 + gamma)
         * (c_zeta + beta * zeta * k2 + gamma)
         * alpha
-        + L1_z * alpha ** 2
+        + L1_z * alpha**2
         + u
     )
 
@@ -189,24 +176,24 @@ def verify(proof, circuit, weak=False):
         * z_omega_zeta
     )
 
-    D_exp -= (tl_exp + tm_exp * zeta ** n + th_exp * zeta ** (2 * n)) * Zh_z
+    D_exp -= (tl_exp + tm_exp * zeta**n + th_exp * zeta ** (2 * n)) * Zh_z
 
     F_exp = (
         D_exp
         + a_exp * v
-        + b_exp * v ** 2
-        + c_exp * v ** 3
-        + s1_exp * v ** 4
-        + s2_exp * v ** 5
+        + b_exp * v**2
+        + c_exp * v**3
+        + s1_exp * v**4
+        + s2_exp * v**5
     )
 
     E_exp = (
         -r0
         + v * a_zeta
-        + v ** 2 * b_zeta
-        + v ** 3 * c_zeta
-        + v ** 4 * s1_zeta
-        + v ** 5 * s2_zeta
+        + v**2 * b_zeta
+        + v**3 * c_zeta
+        + v**4 * s1_zeta
+        + v**5 * s2_zeta
         + u * z_omega_zeta
     )
 
@@ -220,9 +207,9 @@ def verify(proof, circuit, weak=False):
         pairing1 = tau.tau2.pair(e1)
         pairing2 = G2.pair(e2)
 
-        assert pairing1 == pairing2, "pairing1 != pairing2"
+        # assert pairing1 == pairing2, "pairing1 != pairing2"
+        return pairing1 == pairing2
     else:
-
         # assert e1 * tau == e2
         return e1 * tau == e2
 
