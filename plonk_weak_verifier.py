@@ -1,8 +1,5 @@
-import json
 import sha3
-import galois
-from py_ecc.optimized_bn128 import FQ
-from utils import GPoint, SRS, generator1, generator2, validate_point, patch_galois
+from utils import SRS, generator1, generator2, validate_point
 
 
 def numbers_to_hash(numbers, field) -> int:
@@ -22,25 +19,9 @@ def numbers_to_hash(numbers, field) -> int:
 G1 = generator1()
 G2 = generator2()
 
-patch_galois(galois.Poly)
 
-
-def verify(proof, circuit, weak=False):
-    with open(proof, "r") as f, open(circuit, "r") as g:
-        proof = json.load(f)
-        circuit = json.load(g)
-
-    p = proof.pop("Fp")
-    Fp = galois.GF(p)
-    circuit.pop("Fp")
-    for k, v in circuit.items():
-        if k in ["tau", "k1", "k2", "Fp", "omega", "n"]:
-            circuit[k] = Fp(v)
-        elif isinstance(v, bool):
-            continue
-        else:
-            circuit[k] = galois.Poly(coeffs=v, field=Fp)
-    encrypted = circuit.pop("encrypted")
+def verify(proof, circuit, Fp, weak=False):
+    encrypted = circuit["encrypted"]
     n = int(circuit["n"])
     QM = circuit["QM"]
     QL = circuit["QL"]
@@ -57,14 +38,6 @@ def verify(proof, circuit, weak=False):
     k1 = circuit["k1"]
     k2 = circuit["k2"]
     omega = circuit["omega"]
-
-    for k, v in proof.items():
-        if isinstance(v, list):
-            proof[k] = [Fp(x) for x in v]
-        elif isinstance(v, str):
-            proof[k] = GPoint(*[FQ(int(x)) for x in v.strip("(").strip(")").split(",")])
-        else:
-            proof[k] = Fp(v)
 
     round1 = [proof["A"], proof["B"], proof["C"]]
     round2 = [proof["Z"]]
@@ -212,7 +185,3 @@ def verify(proof, circuit, weak=False):
     else:
         # assert e1 * tau == e2
         return e1 * tau == e2
-
-
-if __name__ == "__main__":
-    print(verify("forged_proof.json", "circuit.json", True))
