@@ -24,6 +24,7 @@ __all__ = [
     "validate_point",
     "normalize",
     "curve_order",
+    "SRS"
 ]
 
 
@@ -97,3 +98,19 @@ def validate_point(pt):
         assert is_on_curve(pt, FQ2([3, 0]) / FQ2([9, 1]))
     else:
         raise Exception("Invalid point")
+
+
+class SRS:
+    """Trusted Setup Class aka Structured Reference String"""
+    def __init__(self, tau, n = 2):
+        self.tau = tau
+        g1 = generator1()
+        g2 = generator2()
+        self.tau1 = [g1 * int(tau)**i for i in range(0, n + 7)]
+        self.tau2 = g2 * int(tau)
+
+    def __str__(self):
+        s = f"tau: {self.tau}\n"
+        s += "".join([f"[tau^{i}]G1: {str(normalize(point))}\n" for i, point in enumerate(self.tau1)])
+        s += f"[tau]G2: {str(normalize(self.tau2))}\n"
+        return s
