@@ -1,7 +1,8 @@
 """
-This module provides a wrapper for the optimized_bn128 module.
-It also provides a wrapper for the optimized_bn128 module's G1 and G2 points.
+Utilities for the Plonk protocol.
 """
+import json
+import sha3
 from py_ecc.optimized_bn128 import (
     add,
     multiply,
@@ -24,13 +25,18 @@ __all__ = [
     "validate_point",
     "normalize",
     "curve_order",
+    "SRS",
+    "numbers_to_hash",
+    "patch_galois",
+    "dump_proof",
+    "dump_circuit",
 ]
 
 
 class GPoint(tuple):
 
-    """ 
-    A point on the BN128 curve. 
+    """
+    A point on the BN128 curve.
     This class is a wrapper G1 and G2 points to provide a more intuitive
     interface. For example, instead of writing `multiply(G1, 5)` you can
     write `G1 * 5` or `5 * G1`. Similarly, instead of writing `add(G1, G2)`
@@ -71,18 +77,18 @@ class GPoint(tuple):
         return not self.__eq__(other)
 
     def pair(self, other):
-        """ Pairing function. """
+        """Pairing function."""
 
         return pairing(self, other)
 
 
 def generator1():
-    """ Generator for G1. """
+    """Generator for G1."""
     return GPoint(*G1)
 
 
 def generator2():
-    """ Generator for G2. """
+    """Generator for G2."""
     return GPoint(*G2)
 
 
@@ -97,3 +103,80 @@ def validate_point(pt):
         assert is_on_curve(pt, FQ2([3, 0]) / FQ2([9, 1]))
     else:
         raise Exception("Invalid point")
+
+
+class SRS:
+    """Trusted Setup Class aka Structured Reference String"""
+
+    def __init__(self, tau, n=2):
+        self.tau = tau
+        g1 = generator1()
+        g2 = generator2()
+        self.tau1 = [g1 * int(tau) ** i for i in range(0, n + 7)]
+        self.tau2 = g2 * int(tau)
+
+    def __str__(self):
+        s = f"tau: {self.tau}\n"
+        s += "".join(
+            [
+                f"[tau^{i}]G1: {str(normalize(point))}\n"
+                for i, point in enumerate(self.tau1)
+            ]
+        )
+        s += f"[tau]G2: {str(normalize(self.tau2))}\n"
+        return s
+
+
+def numbers_to_hash(numbers, field) -> int:
+    """Hash a number."""
+    engine = sha3.keccak_256()
+    for number in numbers:
+        if isinstance(number, tuple):
+            x, y, z = number
+            engine.update(bytes(hex(int(x)), "utf-8"))
+            engine.update(bytes(hex(int(y)), "utf-8"))
+            engine.update(bytes(hex(int(z)), "utf-8"))
+        else:
+            engine.update(bytes(hex(int(number)), "utf-8"))
+    return field(int(engine.hexdigest(), 16) % field.order)
+
+
+def patch_galois(Poly):
+    def new_call(self, at, **kwargs):
+        if isinstance(at, SRS):
+            coeffs = self.coeffs[::-1]
+            result = at.tau1[0] * coeffs[0]
+            for i in range(1, len(coeffs)):
+                result += at.tau1[i] * coeffs[i]
+            return result
+
+        return Poly.original_call(self, at, **kwargs)
+
+    Poly.original_call = Poly.__call__
+    Poly.__call__ = new_call
+
+
+def dump_proof(proof, path):
+    """Dump proof to file."""
+    for k, v in proof.items():
+        if isinstance(v, GPoint) or isinstance(v, GPoint):
+            proof[k] = str(v)
+        else:
+            proof[k] = int(v)
+
+    with open(path, "w") as f:
+        json.dump(proof, f, indent=2)
+
+
+def dump_circuit(circuit, path):
+    """Dump circuit to file."""
+    for k, v in circuit.items():
+        if k in ["tau", "k1", "k2", "Fp", "omega", "n"]:
+            circuit[k] = int(v)
+        elif isinstance(v, bool):
+            continue
+        else:
+            circuit[k] = [int(x) for x in v]
+
+    with open(path, "w") as f:
+        json.dump(circuit, f, indent=2)
